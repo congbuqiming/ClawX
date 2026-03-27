@@ -354,19 +354,11 @@ pnpm run build:remote
 
 既存のリモート OpenClaw Gateway に接続する場合は、`Settings -> Gateway -> Use Remote OpenClaw` を有効にしてください。`pnpm run package:remote` と `pnpm run build:remote` は自動で `SKIP_BUNDLED_OPENCLAW=1` を設定するため、`resources/openclaw` は同梱されません。
 
-ローカル開発でも、ローカル OpenClaw ランタイムを完全に無効化してリモート Gateway のみ使いたい場合は、次のように起動できます。
-
-```bash
-CLAWX_SKIP_LOCAL_OPENCLAW=1 pnpm dev
-```
-
-または次のコマンドでも起動できます。
+ローカル開発でも、ローカル OpenClaw ランタイムを完全にスキップしてリモート Gateway のみ使いたい場合は、次のコマンドを実行してください。
 
 ```bash
 pnpm run dev:remote
 ```
-
-`.env.local` に `CLAWX_SKIP_LOCAL_OPENCLAW=1` を書いても構いません。
 
 ### 通信回帰チェック
 

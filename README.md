@@ -358,19 +358,11 @@ pnpm run build:remote
 
 You can also enable **Settings -> Gateway -> Use Remote OpenClaw** to connect ClawX to an already-running remote OpenClaw Gateway. `pnpm run package:remote` and `pnpm run build:remote` set `SKIP_BUNDLED_OPENCLAW=1` for you so `resources/openclaw` is not included.
 
-For local development, you can also disable the local OpenClaw runtime entirely and connect only to a remote Gateway:
-
-```bash
-CLAWX_SKIP_LOCAL_OPENCLAW=1 pnpm dev
-```
-
-Or just use:
+For local development, you can skip the local OpenClaw runtime entirely and connect only to a remote Gateway with:
 
 ```bash
 pnpm run dev:remote
 ```
-
-You can also put `CLAWX_SKIP_LOCAL_OPENCLAW=1` in `.env.local`.
 
 ### Communication Regression Checks
 

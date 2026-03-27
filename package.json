@@ -35,7 +35,7 @@
         "init": "pnpm install && pnpm run uv:download",
         "predev": "zx scripts/prepare-preinstalled-skills-dev.mjs",
         "dev": "vite",
-        "dev:remote": "node -e \"const { spawn } = require('node:child_process'); const child = spawn('vite', { stdio: 'inherit', shell: true, env: { ...process.env, CLAWX_SKIP_LOCAL_OPENCLAW: '1' } }); child.on('exit', (code) => process.exit(code ?? 0));\"",
+        "dev:remote": "vite",
         "build": "vite build && zx scripts/bundle-openclaw.mjs && zx scripts/bundle-openclaw-plugins.mjs && zx scripts/bundle-preinstalled-skills.mjs && electron-builder",
         "build:remote": "node -e \"const { spawn } = require('node:child_process'); const child = spawn('pnpm', ['run', 'build'], { stdio: 'inherit', shell: true, env: { ...process.env, SKIP_BUNDLED_OPENCLAW: '1' } }); child.on('exit', (code) => process.exit(code ?? 0));\"",
         "build:vite": "vite build",

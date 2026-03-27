@@ -358,19 +358,11 @@ pnpm run build:remote
 
 如果你准备连接一台已存在的远端 OpenClaw 网关，可以在 `Settings -> Gateway -> Use Remote OpenClaw` 中启用远端模式。`pnpm run package:remote` 和 `pnpm run build:remote` 会自动设置 `SKIP_BUNDLED_OPENCLAW=1`，从而跳过 `resources/openclaw`。
 
-本地开发时，如果你也想完全跳过本地 OpenClaw 运行时、只连接远端网关，可以这样启动：
-
-```bash
-CLAWX_SKIP_LOCAL_OPENCLAW=1 pnpm dev
-```
-
-或者直接使用：
+本地开发时，如果你也想完全跳过本地 OpenClaw 运行时、只连接远端网关，直接执行：
 
 ```bash
 pnpm run dev:remote
 ```
-
-也可以把 `CLAWX_SKIP_LOCAL_OPENCLAW=1` 写进 `.env.local`。
 
 ### 通信回归检查
 
