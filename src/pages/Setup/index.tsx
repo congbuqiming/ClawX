@@ -23,6 +23,7 @@ import {
 import { TitleBar } from '@/components/layout/TitleBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -140,6 +141,7 @@ export function Setup() {
   const [installedSkills, setInstalledSkills] = useState<string[]>([]);
   // Runtime check status
   const [runtimeChecksPassed, setRuntimeChecksPassed] = useState(false);
+  const [useRemoteGatewaySetup, setUseRemoteGatewaySetup] = useState(false);
 
   const steps = getSteps(t);
   const safeStepIndex = Number.isInteger(currentStep)
@@ -170,6 +172,14 @@ export function Setup() {
   }, [safeStepIndex, providerConfigured, runtimeChecksPassed]);
 
   const handleNext = async () => {
+    if (safeStepIndex === STEP.WELCOME && useRemoteGatewaySetup) {
+      await invokeIpc('settings:set', 'useRemoteOpenClaw', true);
+      useSettingsStore.getState().setUseRemoteOpenClaw(true);
+      markSetupComplete();
+      navigate('/settings#remote-openclaw');
+      return;
+    }
+
     if (isLastStep) {
       // Complete setup
       markSetupComplete();
@@ -253,7 +263,12 @@ export function Setup() {
 
             {/* Step-specific content */}
             <div className="rounded-xl bg-card text-card-foreground border shadow-sm p-8 mb-8">
-              {safeStepIndex === STEP.WELCOME && <WelcomeContent />}
+              {safeStepIndex === STEP.WELCOME && (
+                <WelcomeContent
+                  useRemoteGatewaySetup={useRemoteGatewaySetup}
+                  onUseRemoteGatewaySetupChange={setUseRemoteGatewaySetup}
+                />
+              )}
               {safeStepIndex === STEP.RUNTIME && <RuntimeContent onStatusChange={setRuntimeChecksPassed} />}
               {safeStepIndex === STEP.PROVIDER && (
                 <ProviderContent
@@ -300,6 +315,8 @@ export function Setup() {
                   <Button onClick={handleNext} disabled={!canProceed}>
                     {isLastStep ? (
                       t('nav.getStarted')
+                    ) : safeStepIndex === STEP.WELCOME && useRemoteGatewaySetup ? (
+                      t('welcome.configureRemote')
                     ) : (
                       <>
                         {t('nav.next')}
@@ -319,7 +336,15 @@ export function Setup() {
 
 // ==================== Step Content Components ====================
 
-function WelcomeContent() {
+interface WelcomeContentProps {
+  useRemoteGatewaySetup: boolean;
+  onUseRemoteGatewaySetupChange: (value: boolean) => void;
+}
+
+function WelcomeContent({
+  useRemoteGatewaySetup,
+  onUseRemoteGatewaySetupChange,
+}: WelcomeContentProps) {
   const { t } = useTranslation(['setup', 'settings']);
   const { language, setLanguage } = useSettingsStore();
 
@@ -366,6 +391,23 @@ function WelcomeContent() {
           {t('welcome.features.crossPlatform')}
         </li>
       </ul>
+
+      <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4 text-left">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <Label className="text-sm font-medium text-foreground">
+              {t('welcome.remoteMode')}
+            </Label>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('welcome.remoteModeDesc')}
+            </p>
+          </div>
+          <Switch
+            checked={useRemoteGatewaySetup}
+            onCheckedChange={onUseRemoteGatewaySetupChange}
+          />
+        </div>
+      </div>
     </div>
   );
 }

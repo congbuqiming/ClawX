@@ -28,6 +28,9 @@
     "welcome": {
         "title": "欢迎使用 ClawX",
         "description": "ClawX 是 OpenClaw 的图形界面，让您可以在喜爱的消息平台上轻松使用 AI 助手。",
+        "remoteMode": "连接远程网关",
+        "remoteModeDesc": "跳过首次初始化，直接前往 设置 -> 使用远端 OpenClaw。",
+        "configureRemote": "配置远程网关",
         "features": {
             "noCommand": "无需命令行",
             "modernUI": "现代美观的界面",

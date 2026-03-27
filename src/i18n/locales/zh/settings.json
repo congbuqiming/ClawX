@@ -138,6 +138,8 @@
     "remoteEndpoint": "连接地址",
     "autoStart": "自动启动网关",
     "autoStartDesc": "ClawX 启动时自动启动网关",
+    "autoConnect": "自动连接远端网关",
+    "autoConnectDesc": "ClawX 启动时自动连接已配置的远端网关",
     "useRemote": "使用远端 OpenClaw",
     "useRemoteDesc": "连接已经存在的远端 OpenClaw 网关，而不是启动应用内置的 OpenClaw。",
     "remoteUrl": "远端网关地址",

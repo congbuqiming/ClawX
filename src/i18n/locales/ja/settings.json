@@ -137,6 +137,8 @@
     "remoteEndpoint": "接続先",
     "autoStart": "ゲートウェイ自動起動",
     "autoStartDesc": "ClawX 起動時にゲートウェイを自動起動",
+    "autoConnect": "リモート Gateway に自動接続",
+    "autoConnectDesc": "ClawX 起動時に設定済みのリモート Gateway へ自動接続します",
     "useRemote": "リモート OpenClaw を使う",
     "useRemoteDesc": "同梱版 OpenClaw を起動せず、既存のリモート OpenClaw Gateway に接続します。",
     "remoteUrl": "リモート Gateway URL",

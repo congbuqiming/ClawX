@@ -138,6 +138,8 @@
     "remoteEndpoint": "Endpoint",
     "autoStart": "Auto-start Gateway",
     "autoStartDesc": "Start Gateway when ClawX launches",
+    "autoConnect": "Auto-connect Remote Gateway",
+    "autoConnectDesc": "Connect to the configured remote Gateway when ClawX launches",
     "useRemote": "Use Remote OpenClaw",
     "useRemoteDesc": "Connect to an existing remote OpenClaw Gateway instead of launching the bundled one.",
     "remoteUrl": "Remote Gateway URL",

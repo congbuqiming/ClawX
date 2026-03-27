@@ -1,41 +1,44 @@
 {
-    "steps": {
-        "welcome": {
+  "steps": {
+    "welcome": {
             "title": "ClawXへようこそ",
             "description": "AIアシスタントの設定準備が整いました"
-        },
-        "runtime": {
+    },
+    "runtime": {
             "title": "環境チェック",
             "description": "システム要件を確認中"
-        },
-        "provider": {
+    },
+    "provider": {
             "title": "AIプロバイダー",
             "description": "AIサービスを構成"
-        },
-        "channel": {
+    },
+    "channel": {
             "title": "チャンネル接続",
             "description": "メッセージングプラットフォームを接続（オプション）"
-        },
-        "installing": {
+    },
+    "installing": {
             "title": "セットアップ中",
             "description": "必須コンポーネントをインストール中"
-        },
-        "complete": {
+    },
+    "complete": {
             "title": "完了！",
             "description": "ClawXを使用する準備が整いました"
-        }
-    },
-    "welcome": {
-        "title": "ClawXへようこそ",
-        "description": "ClawXはOpenClawのグラフィカルインターフェースで、お気に入りのメッセージングプラットフォームでAIアシスタントを簡単に使用できます。",
-        "features": {
+    }
+  },
+  "welcome": {
+    "title": "ClawXへようこそ",
+    "description": "ClawXはOpenClawのグラフィカルインターフェースで、お気に入りのメッセージングプラットフォームでAIアシスタントを簡単に使用できます。",
+    "remoteMode": "リモートゲートウェイに接続",
+    "remoteModeDesc": "初回の初期化をスキップして、設定 -> リモートOpenClawの使用 に進みます。",
+    "configureRemote": "リモートゲートウェイを設定",
+    "features": {
             "noCommand": "コマンドライン不要",
             "modernUI": "モダンで美しいインターフェース",
             "bundles": "プリインストールされたスキルバンドル",
             "crossPlatform": "クロスプラットフォーム対応"
-        }
-    },
-    "runtime": {
+    }
+  },
+  "runtime": {
         "title": "環境をチェック中",
         "viewLogs": "ログを表示",
         "recheck": "再チェック",
@@ -43,49 +46,49 @@
         "openclaw": "OpenClaw パッケージ",
         "gateway": "ゲートウェイサービス",
         "startGateway": "ゲートウェイを起動",
-        "status": {
+    "status": {
             "checking": "確認中...",
             "success": "Node.js は利用可能です",
             "error": "失敗",
             "gatewayRunning": "ポート {{port}} で実行中",
             "packageReady": "OpenClaw パッケージ準備完了"
-        },
-        "issue": {
+    },
+    "issue": {
             "title": "環境の問題が検出されました",
             "desc": "OpenClawが正しくインストールされていることを確認してください。詳細はログを確認してください。"
-        },
-        "logs": {
+    },
+    "logs": {
             "title": "アプリケーションログ",
             "openFolder": "ログフォルダを開く",
             "close": "閉じる",
             "noLogs": "（ログはまだありません）"
-        }
-    },
-    "provider": {
+    }
+  },
+  "provider": {
         "label": "モデルプロバイダー",
         "selectPlaceholder": "プロバイダーを選択...",
         "baseUrl": "ベース URL",
         "modelId": "モデル ID",
         "modelIdDesc": "プロバイダーのモデル識別子（例：deepseek-ai/DeepSeek-V3）",
         "codePlanPreset": "Code Plan プリセット",
-        "codePlanMode": "Code Plan",
+    "codePlanMode": "Code Plan",
         "useCodePlanPreset": "Ark Code Plan プリセットを使用",
         "codePlanPresetDesc": "Code Plan は https://ark.cn-beijing.volces.com/api/coding/v3 と model ark-code-latest を使います。Code Plan 通信に /api/v3 を使わないでください。",
         "codePlanDoc": "Code Plan ドキュメント",
         "protocol": "プロトコル",
-        "protocols": {
-            "openaiCompletions": "OpenAI Completions",
-            "openaiResponses": "OpenAI Responses",
+    "protocols": {
+      "openaiCompletions": "OpenAI Completions",
+      "openaiResponses": "OpenAI Responses",
             "anthropic": "Anthropic 互換"
-        },
+    },
         "apiKey": "API キー",
         "save": "保存",
         "validateSave": "検証して保存",
         "valid": "プロバイダーが正常に構成されました",
         "invalid": "無効な API キー",
         "storedLocally": "API キーはローカルマシンに保存されます。"
-    },
-    "channel": {
+  },
+  "channel": {
         "title": "メッセージングチャンネルを接続",
         "subtitle": "AIアシスタントを接続するプラットフォームを選択してください。チャンネルは後で設定で追加できます。",
         "configure": "{{name}} を構成",
@@ -95,23 +98,23 @@
         "connected": "{{name}} 接続済み",
         "connectedDesc": "チャンネルが構成されました。ゲートウェイ起動時に接続されます。",
         "configureAnother": "別のチャンネルを構成"
-    },
-    "installing": {
+  },
+  "installing": {
         "title": "必須コンポーネントをインストール中",
         "subtitle": "AIアシスタントに必要なツールをセットアップしています",
         "progress": "進捗",
-        "status": {
+    "status": {
             "pending": "待機中",
             "installing": "インストール中...",
             "installed": "インストール済み",
             "failed": "失敗"
-        },
+    },
         "error": "セットアップエラー：",
         "restart": "アプリを再起動してください",
         "wait": "これには少し時間がかかる場合があります...",
         "skip": "この手順をスキップ"
-    },
-    "complete": {
+  },
+  "complete": {
         "title": "セットアップ完了！",
         "subtitle": "ClawXの構成が完了し、使用準備が整いました。AIアシスタントとのチャットを開始できます。",
         "provider": "AI プロバイダー",
@@ -119,34 +122,34 @@
         "gateway": "ゲートウェイ",
         "running": "実行中",
         "footer": "設定でスキルをカスタマイズしたり、チャンネルを接続したりできます"
-    },
-    "nav": {
+  },
+  "nav": {
         "next": "次へ",
         "back": "戻る",
         "skipStep": "この手順をスキップ",
         "skipSetup": "セットアップをスキップ",
         "getStarted": "始める"
-    },
-    "defaultSkills": {
-        "opencode": {
-            "name": "OpenCode",
+  },
+  "defaultSkills": {
+    "opencode": {
+      "name": "OpenCode",
             "description": "AI コーディングアシスタントのバックエンド"
-        },
-        "python-env": {
+    },
+    "python-env": {
             "name": "Python 環境",
             "description": "スキルのための Python ランタイム"
-        },
-        "code-assist": {
+    },
+    "code-assist": {
             "name": "コードアシスト",
             "description": "コードの分析と提案"
-        },
-        "file-tools": {
+    },
+    "file-tools": {
             "name": "ファイルツール",
             "description": "ファイルの操作と管理"
-        },
-        "terminal": {
+    },
+    "terminal": {
             "name": "ターミナル",
             "description": "シェルコマンドの実行"
-        }
     }
+  }
 }

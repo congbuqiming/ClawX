@@ -326,6 +326,22 @@ export function Settings() {
   }, [remoteOpenClawToken]);
 
   useEffect(() => {
+    if (window.location.hash !== '#remote-openclaw') {
+      return;
+    }
+
+    const scrollToRemote = () => {
+      document.getElementById('remote-openclaw')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    };
+
+    const timer = window.setTimeout(scrollToRemote, 80);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     setProxyServerDraft(proxyServer);
   }, [proxyServer]);
 
@@ -498,6 +514,13 @@ export function Settings() {
     );
   };
 
+  const gatewayAutoStartLabel = useRemoteOpenClaw
+    ? t('gateway.autoConnect')
+    : t('gateway.autoStart');
+  const gatewayAutoStartDesc = useRemoteOpenClaw
+    ? t('gateway.autoConnectDesc')
+    : t('gateway.autoStartDesc');
+
   return (
     <div className="flex flex-col -m-6 dark:bg-background h-[calc(100vh-2.5rem)] overflow-hidden">
       <div className="w-full max-w-5xl mx-auto flex flex-col h-full p-10 pt-16">
@@ -648,9 +671,9 @@ export function Settings() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-[15px] font-medium text-foreground">{t('gateway.autoStart')}</Label>
+                  <Label className="text-[15px] font-medium text-foreground">{gatewayAutoStartLabel}</Label>
                   <p className="text-[13px] text-muted-foreground mt-1">
-                    {t('gateway.autoStartDesc')}
+                    {gatewayAutoStartDesc}
                   </p>
                 </div>
                 <Switch
@@ -659,7 +682,10 @@ export function Settings() {
                 />
               </div>
 
-              <div className="space-y-4 rounded-2xl border border-black/10 dark:border-white/10 p-5 bg-transparent">
+              <div
+                id="remote-openclaw"
+                className="space-y-4 rounded-2xl border border-black/10 dark:border-white/10 p-5 bg-transparent"
+              >
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <Label className="text-[15px] font-medium text-foreground">{t('gateway.useRemote')}</Label>
@@ -698,6 +724,7 @@ export function Settings() {
                         </Label>
                         <Input
                           id="remote-openclaw-token"
+                          type="password"
                           value={remoteTokenDraft}
                           onChange={(event) => setRemoteTokenDraft(event.target.value)}
                           placeholder={t('gateway.remoteTokenPlaceholder')}
