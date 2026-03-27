@@ -22,6 +22,9 @@ interface SettingsState {
   // Gateway
   gatewayAutoStart: boolean;
   gatewayPort: number;
+  useRemoteOpenClaw: boolean;
+  remoteOpenClawUrl: string;
+  remoteOpenClawToken: string;
   proxyEnabled: boolean;
   proxyServer: string;
   proxyHttpServer: string;
@@ -50,6 +53,9 @@ interface SettingsState {
   setTelemetryEnabled: (value: boolean) => void;
   setGatewayAutoStart: (value: boolean) => void;
   setGatewayPort: (port: number) => void;
+  setUseRemoteOpenClaw: (value: boolean) => void;
+  setRemoteOpenClawUrl: (value: string) => void;
+  setRemoteOpenClawToken: (value: string) => void;
   setProxyEnabled: (value: boolean) => void;
   setProxyServer: (value: string) => void;
   setProxyHttpServer: (value: string) => void;
@@ -73,6 +79,9 @@ const defaultSettings = {
   telemetryEnabled: true,
   gatewayAutoStart: true,
   gatewayPort: 18789,
+  useRemoteOpenClaw: false,
+  remoteOpenClawUrl: '',
+  remoteOpenClawToken: '',
   proxyEnabled: false,
   proxyServer: '',
   proxyHttpServer: '',
@@ -156,6 +165,15 @@ export const useSettingsStore = create<SettingsState>()(
           method: 'PUT',
           body: JSON.stringify({ value: gatewayPort }),
         }).catch(() => { });
+      },
+      setUseRemoteOpenClaw: (useRemoteOpenClaw) => {
+        set({ useRemoteOpenClaw });
+      },
+      setRemoteOpenClawUrl: (remoteOpenClawUrl) => {
+        set({ remoteOpenClawUrl });
+      },
+      setRemoteOpenClawToken: (remoteOpenClawToken) => {
+        set({ remoteOpenClawToken });
       },
       setProxyEnabled: (proxyEnabled) => set({ proxyEnabled }),
       setProxyServer: (proxyServer) => set({ proxyServer }),

@@ -161,7 +161,7 @@ export function buildGatewayConnectFrame(options: {
 }
 
 export async function connectGatewaySocket(options: {
-  port: number;
+  wsUrl: string;
   deviceIdentity: DeviceIdentity | null;
   platform: string;
   pendingRequests: Map<string, PendingGatewayRequest>;
@@ -170,11 +170,10 @@ export async function connectGatewaySocket(options: {
   onMessage: (message: unknown) => void;
   onCloseAfterHandshake: () => void;
 }): Promise<WebSocket> {
-  logger.debug(`Connecting Gateway WebSocket (ws://localhost:${options.port}/ws)`);
+  logger.debug(`Connecting Gateway WebSocket (${options.wsUrl})`);
 
   return await new Promise<WebSocket>((resolve, reject) => {
-    const wsUrl = `ws://localhost:${options.port}/ws`;
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(options.wsUrl);
     let handshakeComplete = false;
     let connectId: string | null = null;
     let handshakeTimeout: NodeJS.Timeout | null = null;

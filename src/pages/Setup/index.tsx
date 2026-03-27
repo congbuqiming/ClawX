@@ -410,11 +410,20 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
         isBuilt: boolean;
         dir: string;
         version?: string;
+        disabledByEnv?: boolean;
       };
 
       setOpenclawDir(openclawStatus.dir);
 
-      if (!openclawStatus.packageExists) {
+      if (openclawStatus.disabledByEnv) {
+        setChecks((prev) => ({
+          ...prev,
+          openclaw: {
+            status: 'success',
+            message: 'Local OpenClaw disabled by CLAWX_SKIP_LOCAL_OPENCLAW; remote gateway mode expected'
+          },
+        }));
+      } else if (!openclawStatus.packageExists) {
         setChecks((prev) => ({
           ...prev,
           openclaw: {

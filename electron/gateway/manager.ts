@@ -51,10 +51,16 @@ import {
 } from './reload-policy';
 import { classifyGatewayStderrMessage, recordGatewayStartupStderrLine } from './startup-stderr';
 import { runGatewayStartupSequence } from './startup-orchestrator';
+import { resolveGatewayConnectionInfo, type GatewayConnectionMode, type GatewayConnectionInfo } from '../utils/gateway-connection';
+import { getAllSettings } from '../utils/store';
 
 export interface GatewayStatus {
   state: GatewayLifecycleState;
   port: number;
+  connectionMode: GatewayConnectionMode;
+  endpoint: string;
+  httpBaseUrl?: string;
+  wsUrl?: string;
   pid?: number;
   uptime?: number;
   error?: string;
@@ -85,7 +91,14 @@ export class GatewayManager extends EventEmitter {
   private processExitCode: number | null = null; // set by exit event, replaces exitCode/signalCode
   private ownsProcess = false;
   private ws: WebSocket | null = null;
-  private status: GatewayStatus = { state: 'stopped', port: PORTS.OPENCLAW_GATEWAY };
+  private status: GatewayStatus = {
+    state: 'stopped',
+    port: PORTS.OPENCLAW_GATEWAY,
+    connectionMode: 'local',
+    endpoint: `http://127.0.0.1:${PORTS.OPENCLAW_GATEWAY}`,
+    httpBaseUrl: `http://127.0.0.1:${PORTS.OPENCLAW_GATEWAY}`,
+    wsUrl: `ws://127.0.0.1:${PORTS.OPENCLAW_GATEWAY}/ws`,
+  };
   private readonly stateController: GatewayStateController;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
@@ -108,6 +121,7 @@ export class GatewayManager extends EventEmitter {
   private externalShutdownSupported: boolean | null = null;
   private reconnectAttemptsTotal = 0;
   private reconnectSuccessTotal = 0;
+  private currentConnectionMode: GatewayConnectionMode = 'local';
   private static readonly RELOAD_POLICY_REFRESH_MS = 15_000;
   private static readonly HEARTBEAT_INTERVAL_MS = 30_000;
   private static readonly HEARTBEAT_TIMEOUT_MS = 12_000;
@@ -144,6 +158,17 @@ export class GatewayManager extends EventEmitter {
     this.reconnectConfig = { ...DEFAULT_RECONNECT_CONFIG, ...config };
     // Device identity is loaded lazily in start() — not in the constructor —
     // so that async file I/O and key generation don't block module loading.
+    this.setStatus({
+      connectionMode: 'local',
+      endpoint: 'http://127.0.0.1:18789',
+      httpBaseUrl: 'http://127.0.0.1:18789',
+      wsUrl: 'ws://127.0.0.1:18789/ws',
+    });
+  }
+
+  private async resolveConnectionInfo(portOverride?: number): Promise<GatewayConnectionInfo> {
+    const settings = await getAllSettings();
+    return resolveGatewayConnectionInfo(settings, portOverride ?? this.status.port);
   }
 
   private async initDeviceIdentity(): Promise<void> {
@@ -217,7 +242,46 @@ export class GatewayManager extends EventEmitter {
     }
 
     this.reconnectAttempts = 0;
-    this.setStatus({ state: 'starting', reconnectAttempts: 0 });
+    const connectionInfo = await this.resolveConnectionInfo();
+    this.setStatus({
+      state: 'starting',
+      reconnectAttempts: 0,
+      port: connectionInfo.port,
+      connectionMode: connectionInfo.mode,
+      endpoint: connectionInfo.endpoint,
+      httpBaseUrl: connectionInfo.httpBaseUrl,
+      wsUrl: connectionInfo.wsUrl,
+      error: undefined,
+    });
+    this.currentConnectionMode = connectionInfo.mode;
+
+    if (connectionInfo.mode === 'remote') {
+      try {
+        await this.connect(connectionInfo);
+        this.startHealthCheck();
+        logger.info(`Remote Gateway connected (${connectionInfo.endpoint})`);
+      } catch (error) {
+        logger.error(`Remote Gateway connect failed (${connectionInfo.endpoint})`, error);
+        this.setStatus({ state: 'error', error: String(error) });
+        throw error;
+      } finally {
+        this.startLock = false;
+        this.restartController.flushDeferredRestart(
+          'start:finally',
+          {
+            state: this.status.state,
+            startLock: this.startLock,
+            shouldReconnect: this.shouldReconnect,
+          },
+          () => {
+            void this.restart().catch((restartError) => {
+              logger.warn('Deferred Gateway restart failed:', restartError);
+            });
+          },
+        );
+      }
+      return;
+    }
 
     // Check if Python environment is ready (self-healing) asynchronously.
     // Fire-and-forget: only needs to run once, not on every retry.
@@ -321,7 +385,12 @@ export class GatewayManager extends EventEmitter {
 
     // If this manager is attached to an external gateway process, ask it to shut down
     // over protocol before closing the socket.
-    if (!this.ownsProcess && this.ws?.readyState === WebSocket.OPEN && this.externalShutdownSupported !== false) {
+    if (
+      this.currentConnectionMode !== 'remote'
+      && !this.ownsProcess
+      && this.ws?.readyState === WebSocket.OPEN
+      && this.externalShutdownSupported !== false
+    ) {
       try {
         await this.rpc('shutdown', undefined, 5000);
         this.externalShutdownSupported = true;
@@ -351,6 +420,7 @@ export class GatewayManager extends EventEmitter {
       }
     }
     this.ownsProcess = false;
+    this.currentConnectionMode = 'local';
 
     clearPendingGatewayRequests(this.pendingRequests, new Error('Gateway stopped'));
 
@@ -477,6 +547,12 @@ export class GatewayManager extends EventEmitter {
    * Falls back to restart on unsupported platforms or signaling failures.
    */
   async reload(): Promise<void> {
+    if (this.currentConnectionMode === 'remote') {
+      logger.info('[gateway-refresh] mode=reload result=remote_reconnect');
+      await this.restart();
+      return;
+    }
+
     await this.refreshReloadPolicy();
 
     if (this.reloadPolicy.mode === 'off' || this.reloadPolicy.mode === 'restart') {
@@ -752,13 +828,18 @@ export class GatewayManager extends EventEmitter {
   /**
    * Connect WebSocket to Gateway
    */
-  private async connect(port: number, _externalToken?: string): Promise<void> {
+  private async connect(target: number | GatewayConnectionInfo, _externalToken?: string): Promise<void> {
+    const connectionInfo = typeof target === 'number'
+      ? await this.resolveConnectionInfo(target)
+      : target;
+
+    this.currentConnectionMode = connectionInfo.mode;
     this.ws = await connectGatewaySocket({
-      port,
+      wsUrl: connectionInfo.wsUrl,
       deviceIdentity: this.deviceIdentity,
       platform: process.platform,
       pendingRequests: this.pendingRequests,
-      getToken: async () => await import('../utils/store').then(({ getSetting }) => getSetting('gatewayToken')),
+      getToken: async () => connectionInfo.token,
       onHandshakeComplete: (ws) => {
         this.ws = ws;
         ws.on('pong', () => {
@@ -766,7 +847,11 @@ export class GatewayManager extends EventEmitter {
         });
         this.setStatus({
           state: 'running',
-          port,
+          port: connectionInfo.port,
+          connectionMode: connectionInfo.mode,
+          endpoint: connectionInfo.endpoint,
+          httpBaseUrl: connectionInfo.httpBaseUrl,
+          wsUrl: connectionInfo.wsUrl,
           connectedAt: Date.now(),
         });
         this.startPing();

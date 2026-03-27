@@ -20,7 +20,7 @@ import {
   removeProviderFromOpenClaw,
 } from '../utils/openclaw-auth';
 import { syncProxyConfigToOpenClaw } from '../utils/openclaw-proxy';
-import { buildOpenClawControlUiUrl } from '../utils/openclaw-control-ui';
+import { resolveGatewayConnectionInfo } from '../utils/gateway-connection';
 import { logger } from '../utils/logger';
 import {
   saveChannelConfig,
@@ -63,6 +63,7 @@ import { validateApiKeyWithProvider } from '../services/providers/provider-valid
 import { appUpdater } from './updater';
 import { registerHostApiProxyHandlers } from './ipc/host-api-proxy';
 import {
+  isGatewayConnectionKey,
   isLaunchAtStartupKey,
   isProxyKey,
   mapAppErrorCode,
@@ -147,6 +148,16 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
     await applyProxySettings(settings);
     if (gatewayManager.getStatus().state === 'running') {
       await gatewayManager.restart();
+    }
+  };
+  const handleGatewayConnectionSettingsChange = async () => {
+    const settings = await getAllSettings();
+    if (gatewayManager.getStatus().state === 'running') {
+      await gatewayManager.restart();
+      return;
+    }
+    if (settings.useRemoteOpenClaw) {
+      await gatewayManager.start();
     }
   };
 
@@ -631,6 +642,8 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
             await setSetting(key, value as never);
             if (isProxyKey(key)) {
               await handleProxySettingsChange();
+            } else if (isGatewayConnectionKey(key)) {
+              await handleGatewayConnectionSettingsChange();
             }
             if (isLaunchAtStartupKey(key)) {
               await syncLaunchAtStartupSettingFromStore();
@@ -646,6 +659,8 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
             }
             if (entries.some(([key]) => isProxyKey(key))) {
               await handleProxySettingsChange();
+            } else if (entries.some(([key]) => isGatewayConnectionKey(key))) {
+              await handleGatewayConnectionSettingsChange();
             }
             if (entries.some(([key]) => isLaunchAtStartupKey(key))) {
               await syncLaunchAtStartupSettingFromStore();
@@ -1163,7 +1178,7 @@ function registerGatewayHandlers(
   ipcMain.handle('gateway:httpProxy', async (_, request: GatewayHttpProxyRequest) => {
     try {
       const status = gatewayManager.getStatus();
-      const port = status.port || 18789;
+      const connection = resolveGatewayConnectionInfo(await getAllSettings(), status.port);
       const path = request?.path && request.path.startsWith('/') ? request.path : '/';
       const method = (request?.method || 'GET').toUpperCase();
       const timeoutMs =
@@ -1171,12 +1186,11 @@ function registerGatewayHandlers(
           ? request.timeoutMs
           : 15000;
 
-      const token = await getSetting('gatewayToken');
       const headers: Record<string, string> = {
         ...(request?.headers ?? {}),
       };
-      if (!headers.Authorization && !headers.authorization && token) {
-        headers.Authorization = `Bearer ${token}`;
+      if (!headers.Authorization && !headers.authorization && connection.token) {
+        headers.Authorization = `Bearer ${connection.token}`;
       }
 
       let body: string | undefined;
@@ -1191,7 +1205,7 @@ function registerGatewayHandlers(
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       const response = await (async () => {
         try {
-          return await proxyAwareFetch(`http://127.0.0.1:${port}${path}`, {
+          return await proxyAwareFetch(`${connection.httpBaseUrl}${path}`, {
             method,
             headers,
             body,
@@ -1317,10 +1331,15 @@ function registerGatewayHandlers(
   ipcMain.handle('gateway:getControlUiUrl', async () => {
     try {
       const status = gatewayManager.getStatus();
-      const token = await getSetting('gatewayToken');
-      const port = status.port || 18789;
-      const url = buildOpenClawControlUiUrl(port, token);
-      return { success: true, url, port, token };
+      const connection = resolveGatewayConnectionInfo(await getAllSettings(), status.port);
+      return {
+        success: true,
+        url: connection.controlUiUrl,
+        port: connection.port,
+        token: connection.token,
+        mode: connection.mode,
+        endpoint: connection.endpoint,
+      };
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -2151,6 +2170,16 @@ function registerSettingsHandlers(gatewayManager: GatewayManager): void {
       await gatewayManager.restart();
     }
   };
+  const handleGatewayConnectionSettingsChange = async () => {
+    const settings = await getAllSettings();
+    if (gatewayManager.getStatus().state === 'running') {
+      await gatewayManager.restart();
+      return;
+    }
+    if (settings.useRemoteOpenClaw) {
+      await gatewayManager.start();
+    }
+  };
 
   ipcMain.handle('settings:get', async (_, key: keyof AppSettings) => {
     return await getSetting(key);
@@ -2163,16 +2192,12 @@ function registerSettingsHandlers(gatewayManager: GatewayManager): void {
   ipcMain.handle('settings:set', async (_, key: keyof AppSettings, value: AppSettings[keyof AppSettings]) => {
     await setSetting(key, value as never);
 
-    if (
-      key === 'proxyEnabled' ||
-      key === 'proxyServer' ||
-      key === 'proxyHttpServer' ||
-      key === 'proxyHttpsServer' ||
-      key === 'proxyAllServer' ||
-      key === 'proxyBypassRules'
-    ) {
+    if (isProxyKey(key)) {
       await handleProxySettingsChange();
+    } else if (isGatewayConnectionKey(key)) {
+      await handleGatewayConnectionSettingsChange();
     }
+
     if (key === 'launchAtStartup') {
       await syncLaunchAtStartupSettingFromStore();
     }
@@ -2195,6 +2220,8 @@ function registerSettingsHandlers(gatewayManager: GatewayManager): void {
       key === 'proxyBypassRules'
     )) {
       await handleProxySettingsChange();
+    } else if (entries.some(([key]) => isGatewayConnectionKey(key))) {
+      await handleGatewayConnectionSettingsChange();
     }
     if (entries.some(([key]) => key === 'launchAtStartup')) {
       await syncLaunchAtStartupSettingFromStore();

@@ -15,41 +15,83 @@
  */
 import { createRequire } from 'module';
 import { join } from 'node:path';
-import { getOpenClawDir, getOpenClawResolvedDir } from './paths';
+import { getOpenClawDir, getOpenClawResolvedDir, isOpenClawPresent } from './paths';
+import { logger } from './logger';
+
+function createOpenClawRequire(packageRoot: string): NodeRequire | null {
+  try {
+    return createRequire(join(packageRoot, 'package.json'));
+  } catch {
+    return null;
+  }
+}
 
 const _openclawPath = getOpenClawDir();
 const _openclawResolvedPath = getOpenClawResolvedDir();
-const _openclawSdkRequire = createRequire(join(_openclawResolvedPath, 'package.json'));
-const _projectSdkRequire = createRequire(join(_openclawPath, 'package.json'));
+const _openclawSdkRequire = isOpenClawPresent()
+  ? createOpenClawRequire(_openclawResolvedPath)
+  : null;
+const _projectSdkRequire = isOpenClawPresent()
+  ? createOpenClawRequire(_openclawPath)
+  : null;
 
 function requireOpenClawSdk(subpath: string): Record<string, unknown> {
-  try {
-    return _openclawSdkRequire(subpath);
-  } catch {
+  if (_openclawSdkRequire) {
+    try {
+      return _openclawSdkRequire(subpath);
+    } catch {
+      // Fall through to the secondary resolver.
+    }
+  }
+  if (_projectSdkRequire) {
     return _projectSdkRequire(subpath);
+  }
+  throw new Error(`Bundled OpenClaw SDK is unavailable for ${subpath}`);
+}
+
+function createSdkFallback<T extends Record<string, unknown>>(subpath: string, fallback: T): T {
+  try {
+    return requireOpenClawSdk(subpath) as T;
+  } catch (error) {
+    logger.warn(String(error));
+    return fallback;
   }
 }
 
 // --- Channel SDK dynamic imports ---
-const _discordSdk = requireOpenClawSdk('openclaw/plugin-sdk/discord') as {
+const _discordSdk = createSdkFallback('openclaw/plugin-sdk/discord', {
+  listDiscordDirectoryGroupsFromConfig: async () => [],
+  listDiscordDirectoryPeersFromConfig: async () => [],
+  normalizeDiscordMessagingTarget: () => undefined,
+}) as {
   listDiscordDirectoryGroupsFromConfig: (...args: unknown[]) => Promise<unknown[]>;
   listDiscordDirectoryPeersFromConfig: (...args: unknown[]) => Promise<unknown[]>;
   normalizeDiscordMessagingTarget: (target: string) => string | undefined;
 };
 
-const _telegramSdk = requireOpenClawSdk('openclaw/plugin-sdk/telegram') as {
+const _telegramSdk = createSdkFallback('openclaw/plugin-sdk/telegram', {
+  listTelegramDirectoryGroupsFromConfig: async () => [],
+  listTelegramDirectoryPeersFromConfig: async () => [],
+  normalizeTelegramMessagingTarget: () => undefined,
+}) as {
   listTelegramDirectoryGroupsFromConfig: (...args: unknown[]) => Promise<unknown[]>;
   listTelegramDirectoryPeersFromConfig: (...args: unknown[]) => Promise<unknown[]>;
   normalizeTelegramMessagingTarget: (target: string) => string | undefined;
 };
 
-const _slackSdk = requireOpenClawSdk('openclaw/plugin-sdk/slack') as {
+const _slackSdk = createSdkFallback('openclaw/plugin-sdk/slack', {
+  listSlackDirectoryGroupsFromConfig: async () => [],
+  listSlackDirectoryPeersFromConfig: async () => [],
+  normalizeSlackMessagingTarget: () => undefined,
+}) as {
   listSlackDirectoryGroupsFromConfig: (...args: unknown[]) => Promise<unknown[]>;
   listSlackDirectoryPeersFromConfig: (...args: unknown[]) => Promise<unknown[]>;
   normalizeSlackMessagingTarget: (target: string) => string | undefined;
 };
 
-const _whatsappSdk = requireOpenClawSdk('openclaw/plugin-sdk/whatsapp-shared') as {
+const _whatsappSdk = createSdkFallback('openclaw/plugin-sdk/whatsapp-shared', {
+  normalizeWhatsAppMessagingTarget: () => undefined,
+}) as {
   normalizeWhatsAppMessagingTarget: (target: string) => string | undefined;
 };
 

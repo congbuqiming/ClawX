@@ -37,6 +37,7 @@ import { acquireProcessInstanceFileLock } from './process-instance-lock';
 import { getSetting } from '../utils/store';
 import { ensureBuiltinSkillsInstalled, ensurePreinstalledSkillsInstalled } from '../utils/skill-config';
 import { ensureAllBundledPluginsInstalled } from '../utils/plugin-install';
+import { isOpenClawPresent } from '../utils/paths';
 import { startHostApiServer } from '../api/server';
 import { HostEventBus } from '../api/event-bus';
 import { deviceOAuthManager } from '../utils/device-oauth';
@@ -321,6 +322,7 @@ async function initialize(): Promise<void> {
 
   // Note: Auto-check for updates is driven by the renderer (update store init)
   // so it respects the user's "Auto-check for updates" setting.
+  const localOpenClawAvailable = isOpenClawPresent();
 
   // Repair any bootstrap files that only contain ClawX markers (no OpenClaw
   // template content). This fixes a race condition where ensureClawXContext()
@@ -329,11 +331,15 @@ async function initialize(): Promise<void> {
     logger.warn('Failed to repair bootstrap files:', error);
   });
 
-  // Pre-deploy built-in skills (feishu-doc, feishu-drive, feishu-perm, feishu-wiki)
-  // to ~/.openclaw/skills/ so they are immediately available without manual install.
-  void ensureBuiltinSkillsInstalled().catch((error) => {
-    logger.warn('Failed to install built-in skills:', error);
-  });
+  if (localOpenClawAvailable) {
+    // Pre-deploy built-in skills (feishu-doc, feishu-drive, feishu-perm, feishu-wiki)
+    // to ~/.openclaw/skills/ so they are immediately available without manual install.
+    void ensureBuiltinSkillsInstalled().catch((error) => {
+      logger.warn('Failed to install built-in skills:', error);
+    });
+  } else {
+    logger.info('Local OpenClaw runtime unavailable; skipping built-in skill deployment');
+  }
 
   // Pre-deploy bundled third-party skills from resources/preinstalled-skills.
   // This installs full skill directories (not only SKILL.md) in an idempotent,
@@ -342,11 +348,15 @@ async function initialize(): Promise<void> {
     logger.warn('Failed to install preinstalled skills:', error);
   });
 
-  // Pre-deploy/upgrade bundled OpenClaw plugins (dingtalk, wecom, qqbot, feishu, wechat)
-  // to ~/.openclaw/extensions/ so they are always up-to-date after an app update.
-  void ensureAllBundledPluginsInstalled().catch((error) => {
-    logger.warn('Failed to install/upgrade bundled plugins:', error);
-  });
+  if (localOpenClawAvailable) {
+    // Pre-deploy/upgrade bundled OpenClaw plugins (dingtalk, wecom, qqbot, feishu, wechat)
+    // to ~/.openclaw/extensions/ so they are always up-to-date after an app update.
+    void ensureAllBundledPluginsInstalled().catch((error) => {
+      logger.warn('Failed to install/upgrade bundled plugins:', error);
+    });
+  } else {
+    logger.info('Local OpenClaw runtime unavailable; skipping bundled plugin deployment');
+  }
 
   // Bridge gateway and host-side events before any auto-start logic runs, so
   // renderer subscribers observe the full startup lifecycle.
@@ -446,15 +456,19 @@ async function initialize(): Promise<void> {
     logger.warn('Failed to merge ClawX context into workspace:', error);
   });
 
-  // Auto-install openclaw CLI and shell completions (non-blocking).
-  void autoInstallCliIfNeeded((installedPath) => {
-    mainWindow?.webContents.send('openclaw:cli-installed', installedPath);
-  }).then(() => {
-    generateCompletionCache();
-    installCompletionToProfile();
-  }).catch((error) => {
-    logger.warn('CLI auto-install failed:', error);
-  });
+  if (localOpenClawAvailable) {
+    // Auto-install openclaw CLI and shell completions (non-blocking).
+    void autoInstallCliIfNeeded((installedPath) => {
+      mainWindow?.webContents.send('openclaw:cli-installed', installedPath);
+    }).then(() => {
+      generateCompletionCache();
+      installCompletionToProfile();
+    }).catch((error) => {
+      logger.warn('CLI auto-install failed:', error);
+    });
+  } else {
+    logger.info('Local OpenClaw runtime unavailable; skipping CLI auto-install');
+  }
 }
 
 if (gotTheLock) {

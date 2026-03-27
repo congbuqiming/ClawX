@@ -43,3 +43,13 @@ export function isProxyKey(key: keyof AppSettings): boolean {
 export function isLaunchAtStartupKey(key: keyof AppSettings): boolean {
   return key === 'launchAtStartup';
 }
+
+export function isGatewayConnectionKey(key: keyof AppSettings): boolean {
+  return (
+    key === 'gatewayPort'
+    || key === 'gatewayToken'
+    || key === 'useRemoteOpenClaw'
+    || key === 'remoteOpenClawUrl'
+    || key === 'remoteOpenClawToken'
+  );
+}

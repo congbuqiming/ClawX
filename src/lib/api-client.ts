@@ -101,6 +101,8 @@ let transportConfig: ApiClientTransportConfig = {
 
 type GatewayStatusLike = {
   port?: unknown;
+  httpBaseUrl?: unknown;
+  wsUrl?: unknown;
 };
 
 type HttpTransportOptions = {
@@ -161,11 +163,19 @@ async function resolveGatewayPort(): Promise<number> {
 }
 
 export async function resolveDefaultGatewayHttpBaseUrl(): Promise<string> {
+  const status = await invokeViaIpc<GatewayStatusLike>('gateway:status', []);
+  if (typeof status?.httpBaseUrl === 'string' && status.httpBaseUrl.trim()) {
+    return status.httpBaseUrl;
+  }
   const port = await resolveGatewayPort();
   return `http://127.0.0.1:${port}`;
 }
 
 export async function resolveDefaultGatewayWsUrl(): Promise<string> {
+  const status = await invokeViaIpc<GatewayStatusLike>('gateway:status', []);
+  if (typeof status?.wsUrl === 'string' && status.wsUrl.trim()) {
+    return status.wsUrl;
+  }
   const port = await resolveGatewayPort();
   return `ws://127.0.0.1:${port}/ws`;
 }

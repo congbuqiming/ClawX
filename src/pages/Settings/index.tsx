@@ -57,6 +57,12 @@ export function Settings() {
     setLaunchAtStartup,
     gatewayAutoStart,
     setGatewayAutoStart,
+    useRemoteOpenClaw,
+    remoteOpenClawUrl,
+    remoteOpenClawToken,
+    setUseRemoteOpenClaw,
+    setRemoteOpenClawUrl,
+    setRemoteOpenClawToken,
     proxyEnabled,
     proxyServer,
     proxyHttpServer,
@@ -91,6 +97,10 @@ export function Settings() {
   const [proxyAllServerDraft, setProxyAllServerDraft] = useState('');
   const [proxyBypassRulesDraft, setProxyBypassRulesDraft] = useState('');
   const [proxyEnabledDraft, setProxyEnabledDraft] = useState(false);
+  const [remoteEnabledDraft, setRemoteEnabledDraft] = useState(false);
+  const [remoteUrlDraft, setRemoteUrlDraft] = useState('');
+  const [remoteTokenDraft, setRemoteTokenDraft] = useState('');
+  const [savingRemoteGateway, setSavingRemoteGateway] = useState(false);
   const [savingProxy, setSavingProxy] = useState(false);
   const [wsDiagnosticEnabled, setWsDiagnosticEnabled] = useState(false);
   const [showTelemetryViewer, setShowTelemetryViewer] = useState(false);
@@ -304,6 +314,18 @@ export function Settings() {
   }, [proxyEnabled]);
 
   useEffect(() => {
+    setRemoteEnabledDraft(useRemoteOpenClaw);
+  }, [useRemoteOpenClaw]);
+
+  useEffect(() => {
+    setRemoteUrlDraft(remoteOpenClawUrl);
+  }, [remoteOpenClawUrl]);
+
+  useEffect(() => {
+    setRemoteTokenDraft(remoteOpenClawToken);
+  }, [remoteOpenClawToken]);
+
+  useEffect(() => {
     setProxyServerDraft(proxyServer);
   }, [proxyServer]);
 
@@ -353,6 +375,35 @@ export function Settings() {
       toast.error(`${t('gateway.proxySaveFailed')}: ${toUserMessage(error)}`);
     } finally {
       setSavingProxy(false);
+    }
+  };
+
+  const handleSaveRemoteGatewaySettings = async () => {
+    const normalizedUrl = remoteUrlDraft.trim();
+    const normalizedToken = remoteTokenDraft.trim();
+
+    if (remoteEnabledDraft && !normalizedUrl) {
+      toast.error(t('gateway.remoteUrlRequired'));
+      return;
+    }
+
+    setSavingRemoteGateway(true);
+    try {
+      await invokeIpc('settings:setMany', {
+        useRemoteOpenClaw: remoteEnabledDraft,
+        remoteOpenClawUrl: normalizedUrl,
+        remoteOpenClawToken: normalizedToken,
+      });
+
+      setUseRemoteOpenClaw(remoteEnabledDraft);
+      setRemoteOpenClawUrl(normalizedUrl);
+      setRemoteOpenClawToken(normalizedToken);
+      toast.success(t('gateway.remoteSaved'));
+      await refreshControlUiInfo();
+    } catch (error) {
+      toast.error(`${t('gateway.remoteSaveFailed')}: ${toUserMessage(error)}`);
+    } finally {
+      setSavingRemoteGateway(false);
     }
   };
 
@@ -543,10 +594,15 @@ export function Settings() {
                 <div>
                   <Label className="text-[15px] font-medium text-foreground">{t('gateway.status')}</Label>
                   <p className="text-[13px] text-muted-foreground mt-1">
-                    {t('gateway.port')}: {gatewayStatus.port}
+                    {useRemoteOpenClaw
+                      ? `${t('gateway.remoteEndpoint')}: ${gatewayStatus.endpoint || remoteOpenClawUrl || '-'}`
+                      : `${t('gateway.port')}: ${gatewayStatus.port}`}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <div className="rounded-full border border-black/10 dark:border-white/10 px-3 py-1.5 text-[12px] font-medium text-muted-foreground">
+                    {useRemoteOpenClaw ? t('gateway.remoteMode') : t('gateway.localMode')}
+                  </div>
                   <div className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium border",
                     gatewayStatus.state === 'running' ? "bg-green-500/10 text-green-600 dark:text-green-500 border-green-500/20" :
@@ -601,6 +657,74 @@ export function Settings() {
                   checked={gatewayAutoStart}
                   onCheckedChange={setGatewayAutoStart}
                 />
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-black/10 dark:border-white/10 p-5 bg-transparent">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label className="text-[15px] font-medium text-foreground">{t('gateway.useRemote')}</Label>
+                    <p className="text-[13px] text-muted-foreground mt-1">
+                      {t('gateway.useRemoteDesc')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={remoteEnabledDraft}
+                    onCheckedChange={setRemoteEnabledDraft}
+                  />
+                </div>
+
+                {remoteEnabledDraft && (
+                  <div className="space-y-4 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="remote-openclaw-url" className="text-[13px] text-foreground/80">
+                          {t('gateway.remoteUrl')}
+                        </Label>
+                        <Input
+                          id="remote-openclaw-url"
+                          value={remoteUrlDraft}
+                          onChange={(event) => setRemoteUrlDraft(event.target.value)}
+                          placeholder="https://openclaw.example.com"
+                          className="h-10 rounded-xl bg-black/5 dark:bg-white/5 border-transparent font-mono text-[13px]"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          {t('gateway.remoteUrlHelp')}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="remote-openclaw-token" className="text-[13px] text-foreground/80">
+                          {t('gateway.remoteToken')}
+                        </Label>
+                        <Input
+                          id="remote-openclaw-token"
+                          value={remoteTokenDraft}
+                          onChange={(event) => setRemoteTokenDraft(event.target.value)}
+                          placeholder={t('gateway.remoteTokenPlaceholder')}
+                          className="h-10 rounded-xl bg-black/5 dark:bg-white/5 border-transparent font-mono text-[13px]"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          {t('gateway.remoteTokenHelp')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => void handleSaveRemoteGatewaySettings()}
+                        disabled={savingRemoteGateway}
+                        className="rounded-xl h-10 px-5 bg-transparent border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5"
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2${savingRemoteGateway ? ' animate-spin' : ''}`} />
+                        {savingRemoteGateway ? t('common:status.saving') : t('common:actions.save')}
+                      </Button>
+                      <p className="text-[12px] text-muted-foreground">
+                        {t('gateway.remoteSaveNote')}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
 

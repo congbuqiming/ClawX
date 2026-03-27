@@ -14,7 +14,7 @@ import {
 import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { getOpenClawDir, getOpenClawEntryPath } from './paths';
+import { getOpenClawDir, getOpenClawEntryPath, isOpenClawPresent } from './paths';
 import { logger } from './logger';
 
 // ── Quoting helpers ──────────────────────────────────────────────────────────
@@ -40,6 +40,10 @@ function getPackagedWindowsNodePath(): string | null {
 // ── CLI command string (for display / copy) ──────────────────────────────────
 
 export function getOpenClawCliCommand(): string {
+  if (!isOpenClawPresent()) {
+    return '';
+  }
+
   const entryPath = getOpenClawEntryPath();
   const platform = process.platform;
 

@@ -226,6 +226,10 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   status: {
     state: 'stopped',
     port: 18789,
+    connectionMode: 'local',
+    endpoint: 'http://127.0.0.1:18789',
+    httpBaseUrl: 'http://127.0.0.1:18789',
+    wsUrl: 'ws://127.0.0.1:18789/ws',
   },
   health: null,
   isInitialized: false,

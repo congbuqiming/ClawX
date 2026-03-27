@@ -1,7 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { PORTS } from '../../utils/config';
-import { buildOpenClawControlUiUrl } from '../../utils/openclaw-control-ui';
-import { getSetting } from '../../utils/store';
+import { getAllSettings } from '../../utils/store';
+import { resolveGatewayConnectionInfo } from '../../utils/gateway-connection';
 import type { HostApiContext } from '../context';
 import { parseJsonBody, sendJson } from '../route-utils';
 
@@ -12,14 +11,20 @@ export async function handleGatewayRoutes(
   ctx: HostApiContext,
 ): Promise<boolean> {
   if (url.pathname === '/api/app/gateway-info' && req.method === 'GET') {
-    const status = ctx.gatewayManager.getStatus();
-    const token = await getSetting('gatewayToken');
-    const port = status.port || PORTS.OPENCLAW_GATEWAY;
-    sendJson(res, 200, {
-      wsUrl: `ws://127.0.0.1:${port}/ws`,
-      token,
-      port,
-    });
+    try {
+      const status = ctx.gatewayManager.getStatus();
+      const connection = resolveGatewayConnectionInfo(await getAllSettings(), status.port);
+      sendJson(res, 200, {
+        wsUrl: connection.wsUrl,
+        httpBaseUrl: connection.httpBaseUrl,
+        token: connection.token,
+        port: connection.port,
+        mode: connection.mode,
+        endpoint: connection.endpoint,
+      });
+    } catch (error) {
+      sendJson(res, 500, { success: false, error: String(error) });
+    }
     return true;
   }
 
@@ -67,10 +72,15 @@ export async function handleGatewayRoutes(
   if (url.pathname === '/api/gateway/control-ui' && req.method === 'GET') {
     try {
       const status = ctx.gatewayManager.getStatus();
-      const token = await getSetting('gatewayToken');
-      const port = status.port || PORTS.OPENCLAW_GATEWAY;
-      const urlValue = buildOpenClawControlUiUrl(port, token);
-      sendJson(res, 200, { success: true, url: urlValue, token, port });
+      const connection = resolveGatewayConnectionInfo(await getAllSettings(), status.port);
+      sendJson(res, 200, {
+        success: true,
+        url: connection.controlUiUrl,
+        token: connection.token,
+        port: connection.port,
+        mode: connection.mode,
+        endpoint: connection.endpoint,
+      });
     } catch (error) {
       sendJson(res, 500, { success: false, error: String(error) });
     }

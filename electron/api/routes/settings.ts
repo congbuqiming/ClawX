@@ -15,6 +15,17 @@ async function handleProxySettingsChange(ctx: HostApiContext): Promise<void> {
   }
 }
 
+async function handleGatewayConnectionSettingsChange(ctx: HostApiContext): Promise<void> {
+  const settings = await getAllSettings();
+  if (ctx.gatewayManager.getStatus().state === 'running') {
+    await ctx.gatewayManager.restart();
+    return;
+  }
+  if (settings.useRemoteOpenClaw) {
+    await ctx.gatewayManager.start();
+  }
+}
+
 function patchTouchesProxy(patch: Partial<AppSettings>): boolean {
   return Object.keys(patch).some((key) => (
     key === 'proxyEnabled' ||
@@ -28,6 +39,16 @@ function patchTouchesProxy(patch: Partial<AppSettings>): boolean {
 
 function patchTouchesLaunchAtStartup(patch: Partial<AppSettings>): boolean {
   return Object.prototype.hasOwnProperty.call(patch, 'launchAtStartup');
+}
+
+function patchTouchesGatewayConnection(patch: Partial<AppSettings>): boolean {
+  return Object.keys(patch).some((key) => (
+    key === 'gatewayPort'
+    || key === 'gatewayToken'
+    || key === 'useRemoteOpenClaw'
+    || key === 'remoteOpenClawUrl'
+    || key === 'remoteOpenClawToken'
+  ));
 }
 
 export async function handleSettingsRoutes(
@@ -50,6 +71,8 @@ export async function handleSettingsRoutes(
       }
       if (patchTouchesProxy(patch)) {
         await handleProxySettingsChange(ctx);
+      } else if (patchTouchesGatewayConnection(patch)) {
+        await handleGatewayConnectionSettingsChange(ctx);
       }
       if (patchTouchesLaunchAtStartup(patch)) {
         await syncLaunchAtStartupSettingFromStore();
@@ -85,6 +108,14 @@ export async function handleSettingsRoutes(
         key === 'proxyBypassRules'
       ) {
         await handleProxySettingsChange(ctx);
+      } else if (
+        key === 'gatewayPort'
+        || key === 'gatewayToken'
+        || key === 'useRemoteOpenClaw'
+        || key === 'remoteOpenClawUrl'
+        || key === 'remoteOpenClawToken'
+      ) {
+        await handleGatewayConnectionSettingsChange(ctx);
       }
       if (key === 'launchAtStartup') {
         await syncLaunchAtStartupSettingFromStore();

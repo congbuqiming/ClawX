@@ -35,6 +35,9 @@ export interface AppSettings {
   gatewayAutoStart: boolean;
   gatewayPort: number;
   gatewayToken: string;
+  useRemoteOpenClaw: boolean;
+  remoteOpenClawUrl: string;
+  remoteOpenClawToken: string;
   proxyEnabled: boolean;
   proxyServer: string;
   proxyHttpServer: string;
@@ -86,6 +89,9 @@ function createDefaultSettings(): AppSettings {
     gatewayAutoStart: true,
     gatewayPort: 18789,
     gatewayToken: generateToken(),
+    useRemoteOpenClaw: false,
+    remoteOpenClawUrl: '',
+    remoteOpenClawToken: '',
     proxyEnabled: false,
     proxyServer: '',
     proxyHttpServer: '',

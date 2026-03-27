@@ -37,6 +37,11 @@ function getElectronApp() {
   return fallbackApp;
 }
 
+export function isLocalOpenClawDisabled(): boolean {
+  const raw = process.env.CLAWX_SKIP_LOCAL_OPENCLAW?.trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
+}
+
 /**
  * Expand ~ to home directory
  */
@@ -114,6 +119,9 @@ export function getPreloadPath(): string {
  * - Development: from node_modules/openclaw
  */
 export function getOpenClawDir(): string {
+  if (isLocalOpenClawDisabled() && !getElectronApp().isPackaged) {
+    return join(getElectronApp().getAppPath(), '.clawx-disabled-openclaw');
+  }
   if (getElectronApp().isPackaged) {
     return join(process.resourcesPath, 'openclaw');
   }
@@ -188,6 +196,7 @@ export interface OpenClawStatus {
   entryPath: string;
   dir: string;
   version?: string;
+  disabledByEnv?: boolean;
 }
 
 export function getOpenClawStatus(): OpenClawStatus {
@@ -211,6 +220,7 @@ export function getOpenClawStatus(): OpenClawStatus {
     entryPath: getOpenClawEntryPath(),
     dir,
     version,
+    disabledByEnv: isLocalOpenClawDisabled() && !getElectronApp().isPackaged,
   };
 
   try {

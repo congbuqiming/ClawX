@@ -9,6 +9,10 @@
 export interface GatewayStatus {
   state: 'stopped' | 'starting' | 'running' | 'error' | 'reconnecting';
   port: number;
+  connectionMode: 'local' | 'remote';
+  endpoint: string;
+  httpBaseUrl?: string;
+  wsUrl?: string;
   pid?: number;
   uptime?: number;
   error?: string;

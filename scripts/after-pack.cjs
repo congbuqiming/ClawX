@@ -531,10 +531,12 @@ exports.default = async function afterPack(context) {
   const appOutDir = context.appOutDir;
   const platform = context.electronPlatformName; // 'win32' | 'darwin' | 'linux'
   const arch = resolveArch(context.arch);
+  const skipBundledOpenClaw = process.env.SKIP_BUNDLED_OPENCLAW === '1';
 
   console.log(`[after-pack] Target: ${platform}/${arch}`);
 
-  const src = join(__dirname, '..', 'build', 'openclaw', 'node_modules');
+  const buildOpenClawRoot = join(__dirname, '..', 'build', 'openclaw');
+  const src = join(buildOpenClawRoot, 'node_modules');
 
   let resourcesDir;
   if (platform === 'darwin') {
@@ -549,23 +551,18 @@ exports.default = async function afterPack(context) {
   const nodeModulesRoot = join(__dirname, '..', 'node_modules');
   const pluginsDestRoot = join(resourcesDir, 'openclaw-plugins');
 
-  if (!existsSync(src)) {
-    console.warn('[after-pack] ⚠️  build/openclaw/node_modules not found. Run bundle-openclaw first.');
-    return;
+  if (!skipBundledOpenClaw && existsSync(buildOpenClawRoot)) {
+    console.log(`[after-pack] Copying bundled OpenClaw to ${openclawRoot} ...`);
+    rmSync(openclawRoot, { recursive: true, force: true });
+    cpSync(buildOpenClawRoot, openclawRoot, { recursive: true });
+    console.log('[after-pack] ✅ bundled OpenClaw copied.');
+
+    if (existsSync(src)) {
+      patchBrokenModules(dest);
+    }
+  } else {
+    console.log('[after-pack] ℹ️  Bundled OpenClaw copy skipped.');
   }
-
-  // 1. Copy node_modules (electron-builder skips it due to .gitignore)
-  const depCount = readdirSync(src, { withFileTypes: true })
-    .filter(d => d.isDirectory() && d.name !== '.bin')
-    .length;
-
-  console.log(`[after-pack] Copying ${depCount} openclaw dependencies to ${dest} ...`);
-  cpSync(src, dest, { recursive: true });
-  console.log('[after-pack] ✅ openclaw node_modules copied.');
-
-  // Patch broken modules whose CJS transpiled output sets module.exports = undefined,
-  // causing TypeError in Node.js 22+ ESM interop.
-  patchBrokenModules(dest);
 
   // 1.1 Bundle OpenClaw plugins directly from node_modules into packaged resources.
   //     This is intentionally done in afterPack (not extraResources) because:
@@ -597,21 +594,23 @@ exports.default = async function afterPack(context) {
     }
   }
 
-  // 2. General cleanup on the full openclaw directory (not just node_modules)
-  console.log('[after-pack] 🧹 Cleaning up unnecessary files ...');
-  const removedRoot = cleanupUnnecessaryFiles(openclawRoot);
-  console.log(`[after-pack] ✅ Removed ${removedRoot} unnecessary files/directories.`);
+  if (existsSync(openclawRoot)) {
+    // 2. General cleanup on the full openclaw directory (not just node_modules)
+    console.log('[after-pack] 🧹 Cleaning up unnecessary files ...');
+    const removedRoot = cleanupUnnecessaryFiles(openclawRoot);
+    console.log(`[after-pack] ✅ Removed ${removedRoot} unnecessary files/directories.`);
 
-  // 3. Platform-specific: strip koffi non-target platform binaries
-  const koffiRemoved = cleanupKoffi(dest, platform, arch);
-  if (koffiRemoved > 0) {
-    console.log(`[after-pack] ✅ koffi: removed ${koffiRemoved} non-target platform binaries (kept ${platform}_${arch}).`);
-  }
+    // 3. Platform-specific: strip koffi non-target platform binaries
+    const koffiRemoved = cleanupKoffi(dest, platform, arch);
+    if (koffiRemoved > 0) {
+      console.log(`[after-pack] ✅ koffi: removed ${koffiRemoved} non-target platform binaries (kept ${platform}_${arch}).`);
+    }
 
-  // 4. Platform-specific: strip wrong-platform native packages
-  const nativeRemoved = cleanupNativePlatformPackages(dest, platform, arch);
-  if (nativeRemoved > 0) {
-    console.log(`[after-pack] ✅ Removed ${nativeRemoved} non-target native platform packages.`);
+    // 4. Platform-specific: strip wrong-platform native packages
+    const nativeRemoved = cleanupNativePlatformPackages(dest, platform, arch);
+    if (nativeRemoved > 0) {
+      console.log(`[after-pack] ✅ Removed ${nativeRemoved} non-target native platform packages.`);
+    }
   }
 
   // 5. Patch lru-cache in app.asar.unpacked
