@@ -531,7 +531,7 @@ exports.default = async function afterPack(context) {
   const appOutDir = context.appOutDir;
   const platform = context.electronPlatformName; // 'win32' | 'darwin' | 'linux'
   const arch = resolveArch(context.arch);
-  const skipBundledOpenClaw = process.env.SKIP_BUNDLED_OPENCLAW === '1';
+  const skipBundledOpenClaw = existsSync(join(__dirname, '..', 'build', '.remote-package'));
 
   console.log(`[after-pack] Target: ${platform}/${arch}`);
 

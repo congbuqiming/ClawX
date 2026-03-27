@@ -3,6 +3,7 @@
  * Application configuration
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Sun,
   Moon,
@@ -48,6 +49,7 @@ type ControlUiInfo = {
 
 export function Settings() {
   const { t } = useTranslation('settings');
+  const location = useLocation();
   const {
     theme,
     setTheme,
@@ -326,11 +328,12 @@ export function Settings() {
   }, [remoteOpenClawToken]);
 
   useEffect(() => {
-    if (window.location.hash !== '#remote-openclaw') {
+    if (location.hash !== '#remote-openclaw') {
       return;
     }
 
     const scrollToRemote = () => {
+      setRemoteEnabledDraft(true);
       document.getElementById('remote-openclaw')?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
@@ -339,7 +342,7 @@ export function Settings() {
 
     const timer = window.setTimeout(scrollToRemote, 80);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [location.hash]);
 
   useEffect(() => {
     setProxyServerDraft(proxyServer);

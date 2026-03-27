@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { flushSync } from 'react-dom';
 import {
   Check,
   ChevronDown,
@@ -173,16 +174,18 @@ export function Setup() {
 
   const handleNext = async () => {
     if (safeStepIndex === STEP.WELCOME && useRemoteGatewaySetup) {
-      await invokeIpc('settings:set', 'useRemoteOpenClaw', true);
-      useSettingsStore.getState().setUseRemoteOpenClaw(true);
-      markSetupComplete();
+      flushSync(() => {
+        markSetupComplete();
+      });
       navigate('/settings#remote-openclaw');
       return;
     }
 
     if (isLastStep) {
       // Complete setup
-      markSetupComplete();
+      flushSync(() => {
+        markSetupComplete();
+      });
       toast.success(t('complete.title'));
       navigate('/');
     } else {
@@ -195,7 +198,9 @@ export function Setup() {
   };
 
   const handleSkip = () => {
-    markSetupComplete();
+    flushSync(() => {
+      markSetupComplete();
+    });
     navigate('/');
   };
 

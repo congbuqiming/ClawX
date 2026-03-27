@@ -18,12 +18,13 @@
 
 import 'zx/globals';
 
-if (process.env.SKIP_BUNDLED_OPENCLAW === '1') {
-  echo`⏭️  SKIP_BUNDLED_OPENCLAW=1, skipping openclaw bundling.`;
+const ROOT = path.resolve(__dirname, '..');
+const REMOTE_PACKAGE_MARKER = path.join(ROOT, 'build', '.remote-package');
+
+if (fs.existsSync(REMOTE_PACKAGE_MARKER)) {
+  echo`⏭️  Remote packaging marker detected, skipping openclaw bundling.`;
   process.exit(0);
 }
-
-const ROOT = path.resolve(__dirname, '..');
 const OUTPUT = path.join(ROOT, 'build', 'openclaw');
 const NODE_MODULES = path.join(ROOT, 'node_modules');
 

@@ -350,13 +350,17 @@ pnpm package              # Package for current platform (includes bundled prein
 pnpm package:mac          # Package for macOS
 pnpm package:win          # Package for Windows
 pnpm package:linux        # Package for Linux
+pnpm package:mac:remote   # Remote-only package for macOS
+pnpm package:win:remote   # Remote-only package for Windows
+pnpm package:linux:remote # Remote-only package for Linux
 
 # Remote-gateway-only asset prep / package
 pnpm run package:remote
 pnpm run build:remote
+pnpm run release:remote
 ```
 
-You can also enable **Settings -> Gateway -> Use Remote OpenClaw** to connect ClawX to an already-running remote OpenClaw Gateway. `pnpm run package:remote` and `pnpm run build:remote` set `SKIP_BUNDLED_OPENCLAW=1` for you so `resources/openclaw` is not included.
+You can also enable **Settings -> Gateway -> Use Remote OpenClaw** to connect ClawX to an already-running remote OpenClaw Gateway. `pnpm run package:remote`, `pnpm run build:remote`, `pnpm run release:remote`, and the platform-specific `package:*:remote` commands automatically skip bundling `resources/openclaw`.
 
 For local development, you can skip the local OpenClaw runtime entirely and connect only to a remote Gateway with:
 

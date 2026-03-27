@@ -154,9 +154,9 @@ function createWindow(): BrowserWindow {
 
   const win = new BrowserWindow({
     width: 1280,
-    height: 800,
+    height: 920,
     minWidth: 960,
-    minHeight: 600,
+    minHeight: 720,
     icon: getAppIcon(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
