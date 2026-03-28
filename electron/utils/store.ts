@@ -6,10 +6,22 @@
 import { randomBytes } from 'crypto';
 import { app } from 'electron';
 import { resolveSupportedLanguage } from '../../shared/language';
+import { isRemoteGatewayOnlyRuntime } from './paths';
 
 // Lazy-load electron-store (ESM module)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let settingsStoreInstance: any = null;
+
+function applyRemoteGatewayOnlyOverrides(settings: AppSettings): AppSettings {
+  if (!isRemoteGatewayOnlyRuntime()) {
+    return settings;
+  }
+
+  return {
+    ...settings,
+    useRemoteOpenClaw: true,
+  };
+}
 
 /**
  * Generate a random token for gateway authentication
@@ -89,7 +101,7 @@ function createDefaultSettings(): AppSettings {
     gatewayAutoStart: true,
     gatewayPort: 18789,
     gatewayToken: generateToken(),
-    useRemoteOpenClaw: false,
+    useRemoteOpenClaw: isRemoteGatewayOnlyRuntime(),
     remoteOpenClawUrl: '',
     remoteOpenClawToken: '',
     proxyEnabled: false,
@@ -135,7 +147,11 @@ async function getSettingsStore() {
  */
 export async function getSetting<K extends keyof AppSettings>(key: K): Promise<AppSettings[K]> {
   const store = await getSettingsStore();
-  return store.get(key);
+  const value = store.get(key);
+  if (key === 'useRemoteOpenClaw' && isRemoteGatewayOnlyRuntime()) {
+    return true as AppSettings[K];
+  }
+  return value;
 }
 
 /**
@@ -146,6 +162,10 @@ export async function setSetting<K extends keyof AppSettings>(
   value: AppSettings[K]
 ): Promise<void> {
   const store = await getSettingsStore();
+  if (key === 'useRemoteOpenClaw' && isRemoteGatewayOnlyRuntime()) {
+    store.set(key, true as AppSettings[K]);
+    return;
+  }
   store.set(key, value);
 }
 
@@ -154,7 +174,7 @@ export async function setSetting<K extends keyof AppSettings>(
  */
 export async function getAllSettings(): Promise<AppSettings> {
   const store = await getSettingsStore();
-  return store.store;
+  return applyRemoteGatewayOnlyOverrides(store.store);
 }
 
 /**

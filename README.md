@@ -361,6 +361,7 @@ pnpm run release:remote
 ```
 
 You can also enable **Settings -> Gateway -> Use Remote OpenClaw** to connect ClawX to an already-running remote OpenClaw Gateway. `pnpm run package:remote`, `pnpm run build:remote`, `pnpm run release:remote`, and the platform-specific `package:*:remote` commands automatically skip bundling `resources/openclaw`.
+These remote-only commands also avoid auto-starting or probing a local Gateway at runtime. If no remote URL is configured yet, ClawX stays idle until you save one in Settings.
 
 For local development, you can skip the local OpenClaw runtime entirely and connect only to a remote Gateway with:
 

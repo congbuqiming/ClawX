@@ -48,6 +48,7 @@ import {
   waitForWeChatLoginSession,
 } from '../../utils/wechat-login';
 import { whatsAppLoginManager } from '../../utils/whatsapp-login';
+import { getAllSettings } from '../../utils/store';
 import { proxyAwareFetch } from '../../utils/proxy-fetch';
 import {
   listDiscordDirectoryGroupsFromConfig,
@@ -1021,6 +1022,14 @@ export async function handleChannelRoutes(
   url: URL,
   ctx: HostApiContext,
 ): Promise<boolean> {
+  const getRemotePluginInstallWarning = async (channelLabel: string): Promise<string | null> => {
+    const settings = await getAllSettings();
+    if (!settings.useRemoteOpenClaw) {
+      return null;
+    }
+    return `Remote Gateway mode is enabled. Local ${channelLabel} plugin installation was skipped; ensure the plugin is installed on the remote OpenClaw host.`;
+  };
+
   if (url.pathname === '/api/channels/configured' && req.method === 'GET') {
     const channels = await listConfiguredChannels();
     sendJson(res, 200, { success: true, channels: Array.from(new Set(channels.map((channel) => toUiChannelType(channel)))) });
@@ -1185,6 +1194,14 @@ export async function handleChannelRoutes(
       const body = await parseJsonBody<{ channelType: string; config: Record<string, unknown>; accountId?: string }>(req);
       const storedChannelType = resolveStoredChannelType(body.channelType);
       if (storedChannelType === 'dingtalk') {
+        const remoteWarning = await getRemotePluginInstallWarning('DingTalk');
+        if (remoteWarning) {
+          await saveChannelConfig(body.channelType, body.config, body.accountId);
+          await ensureScopedChannelBinding(body.channelType, body.accountId);
+          scheduleGatewayChannelSaveRefresh(ctx, storedChannelType, `channel:saveConfig:${storedChannelType}`);
+          sendJson(res, 200, { success: true, warning: remoteWarning, pluginInstalled: false });
+          return true;
+        }
         const installResult = await ensureDingTalkPluginInstalled();
         if (!installResult.installed) {
           sendJson(res, 500, { success: false, error: installResult.warning || 'DingTalk plugin install failed' });
@@ -1192,6 +1209,14 @@ export async function handleChannelRoutes(
         }
       }
       if (storedChannelType === 'wecom') {
+        const remoteWarning = await getRemotePluginInstallWarning('WeCom');
+        if (remoteWarning) {
+          await saveChannelConfig(body.channelType, body.config, body.accountId);
+          await ensureScopedChannelBinding(body.channelType, body.accountId);
+          scheduleGatewayChannelSaveRefresh(ctx, storedChannelType, `channel:saveConfig:${storedChannelType}`);
+          sendJson(res, 200, { success: true, warning: remoteWarning, pluginInstalled: false });
+          return true;
+        }
         const installResult = await ensureWeComPluginInstalled();
         if (!installResult.installed) {
           sendJson(res, 500, { success: false, error: installResult.warning || 'WeCom plugin install failed' });
@@ -1199,6 +1224,14 @@ export async function handleChannelRoutes(
         }
       }
       if (storedChannelType === 'qqbot') {
+        const remoteWarning = await getRemotePluginInstallWarning('QQ Bot');
+        if (remoteWarning) {
+          await saveChannelConfig(body.channelType, body.config, body.accountId);
+          await ensureScopedChannelBinding(body.channelType, body.accountId);
+          scheduleGatewayChannelSaveRefresh(ctx, storedChannelType, `channel:saveConfig:${storedChannelType}`);
+          sendJson(res, 200, { success: true, warning: remoteWarning, pluginInstalled: false });
+          return true;
+        }
         const installResult = await ensureQQBotPluginInstalled();
         if (!installResult.installed) {
           sendJson(res, 500, { success: false, error: installResult.warning || 'QQ Bot plugin install failed' });
@@ -1206,6 +1239,14 @@ export async function handleChannelRoutes(
         }
       }
       if (storedChannelType === 'feishu') {
+        const remoteWarning = await getRemotePluginInstallWarning('Feishu');
+        if (remoteWarning) {
+          await saveChannelConfig(body.channelType, body.config, body.accountId);
+          await ensureScopedChannelBinding(body.channelType, body.accountId);
+          scheduleGatewayChannelSaveRefresh(ctx, storedChannelType, `channel:saveConfig:${storedChannelType}`);
+          sendJson(res, 200, { success: true, warning: remoteWarning, pluginInstalled: false });
+          return true;
+        }
         const installResult = await ensureFeishuPluginInstalled();
         if (!installResult.installed) {
           sendJson(res, 500, { success: false, error: installResult.warning || 'Feishu plugin install failed' });
@@ -1213,6 +1254,14 @@ export async function handleChannelRoutes(
         }
       }
       if (storedChannelType === OPENCLAW_WECHAT_CHANNEL_TYPE) {
+        const remoteWarning = await getRemotePluginInstallWarning('WeChat');
+        if (remoteWarning) {
+          await saveChannelConfig(body.channelType, body.config, body.accountId);
+          await ensureScopedChannelBinding(body.channelType, body.accountId);
+          scheduleGatewayChannelSaveRefresh(ctx, storedChannelType, `channel:saveConfig:${storedChannelType}`);
+          sendJson(res, 200, { success: true, warning: remoteWarning, pluginInstalled: false });
+          return true;
+        }
         const installResult = await ensureWeChatPluginInstalled();
         if (!installResult.installed) {
           sendJson(res, 500, { success: false, error: installResult.warning || 'WeChat plugin install failed' });

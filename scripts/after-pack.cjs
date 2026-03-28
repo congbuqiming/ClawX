@@ -19,8 +19,9 @@
  *      @mariozechner/clipboard).
  */
 
-const { cpSync, existsSync, readdirSync, rmSync, statSync, mkdirSync, realpathSync } = require('fs');
+const { cpSync, existsSync, readdirSync, rmSync, statSync, mkdirSync, realpathSync, writeFileSync } = require('fs');
 const { join, dirname, basename, relative } = require('path');
+const REMOTE_GATEWAY_ONLY_MARKER = 'clawx-remote-only';
 
 // On Windows, paths in pnpm's virtual store can exceed the default MAX_PATH
 // limit (260 chars). Node.js 18.17+ respects the system LongPathsEnabled
@@ -550,8 +551,10 @@ exports.default = async function afterPack(context) {
   const dest = join(openclawRoot, 'node_modules');
   const nodeModulesRoot = join(__dirname, '..', 'node_modules');
   const pluginsDestRoot = join(resourcesDir, 'openclaw-plugins');
+  const remoteOnlyMarkerPath = join(resourcesDir, REMOTE_GATEWAY_ONLY_MARKER);
 
   if (!skipBundledOpenClaw && existsSync(buildOpenClawRoot)) {
+    rmSync(remoteOnlyMarkerPath, { force: true });
     console.log(`[after-pack] Copying bundled OpenClaw to ${openclawRoot} ...`);
     rmSync(openclawRoot, { recursive: true, force: true });
     cpSync(buildOpenClawRoot, openclawRoot, { recursive: true });
@@ -561,6 +564,7 @@ exports.default = async function afterPack(context) {
       patchBrokenModules(dest);
     }
   } else {
+    writeFileSync(remoteOnlyMarkerPath, 'remote-only\n', 'utf8');
     console.log('[after-pack] ℹ️  Bundled OpenClaw copy skipped.');
   }
 

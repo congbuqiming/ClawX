@@ -21,7 +21,7 @@ async function handleGatewayConnectionSettingsChange(ctx: HostApiContext): Promi
     await ctx.gatewayManager.restart();
     return;
   }
-  if (settings.useRemoteOpenClaw) {
+  if (settings.useRemoteOpenClaw && settings.remoteOpenClawUrl.trim().length > 0) {
     await ctx.gatewayManager.start();
   }
 }

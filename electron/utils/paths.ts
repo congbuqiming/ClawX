@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync } from 'fs';
 const require = createRequire(import.meta.url);
 
 type ElectronAppLike = Pick<typeof import('electron').app, 'isPackaged' | 'getPath' | 'getAppPath'>;
+const REMOTE_GATEWAY_ONLY_MARKER = 'clawx-remote-only';
 
 export {
   quoteForCmd,
@@ -39,6 +40,18 @@ function getElectronApp() {
 
 export function isRemoteGatewayOnlyDevMode(): boolean {
   return !getElectronApp().isPackaged && process.env.npm_lifecycle_event === 'dev:remote';
+}
+
+export function getRemoteGatewayOnlyMarkerPath(): string {
+  return join(process.resourcesPath, REMOTE_GATEWAY_ONLY_MARKER);
+}
+
+export function isRemoteGatewayOnlyPackagedMode(): boolean {
+  return getElectronApp().isPackaged && existsSync(getRemoteGatewayOnlyMarkerPath());
+}
+
+export function isRemoteGatewayOnlyRuntime(): boolean {
+  return isRemoteGatewayOnlyDevMode() || isRemoteGatewayOnlyPackagedMode();
 }
 
 /**
@@ -118,7 +131,7 @@ export function getPreloadPath(): string {
  * - Development: from node_modules/openclaw
  */
 export function getOpenClawDir(): string {
-  if (isRemoteGatewayOnlyDevMode()) {
+  if (isRemoteGatewayOnlyRuntime()) {
     return join(getElectronApp().getAppPath(), '.clawx-disabled-openclaw');
   }
   if (getElectronApp().isPackaged) {
@@ -219,7 +232,7 @@ export function getOpenClawStatus(): OpenClawStatus {
     entryPath: getOpenClawEntryPath(),
     dir,
     version,
-    skippedForRemoteDev: isRemoteGatewayOnlyDevMode(),
+    skippedForRemoteDev: isRemoteGatewayOnlyRuntime(),
   };
 
   try {

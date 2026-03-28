@@ -140,6 +140,14 @@ export function registerIpcHandlers(
   registerFileHandlers();
 }
 
+async function getRemotePluginInstallWarning(channelLabel: string): Promise<string | null> {
+  const settings = await getAllSettings();
+  if (!settings.useRemoteOpenClaw) {
+    return null;
+  }
+  return `Remote Gateway mode is enabled. Local ${channelLabel} plugin installation was skipped; ensure the plugin is installed on the remote OpenClaw host.`;
+}
+
 function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
   const providerService = getProviderService();
   const handleProxySettingsChange = async () => {
@@ -156,7 +164,7 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
       await gatewayManager.restart();
       return;
     }
-    if (settings.useRemoteOpenClaw) {
+    if (settings.useRemoteOpenClaw && settings.remoteOpenClawUrl.trim().length > 0) {
       await gatewayManager.start();
     }
   };
@@ -1486,6 +1494,12 @@ function registerOpenClawHandlers(gatewayManager: GatewayManager): void {
     try {
       logger.info('channel:saveConfig', { channelType, keys: Object.keys(config || {}) });
       if (channelType === 'dingtalk') {
+        const remoteWarning = await getRemotePluginInstallWarning('DingTalk');
+        if (remoteWarning) {
+          await saveChannelConfig(channelType, config);
+          scheduleGatewayChannelSaveRefresh(channelType, `channel:saveConfig (${channelType})`);
+          return { success: true, pluginInstalled: false, warning: remoteWarning };
+        }
         const installResult = await ensureDingTalkPluginInstalled();
         if (!installResult.installed) {
           return {
@@ -1502,6 +1516,12 @@ function registerOpenClawHandlers(gatewayManager: GatewayManager): void {
         };
       }
       if (channelType === 'wecom') {
+        const remoteWarning = await getRemotePluginInstallWarning('WeCom');
+        if (remoteWarning) {
+          await saveChannelConfig(channelType, config);
+          scheduleGatewayChannelSaveRefresh(channelType, `channel:saveConfig (${channelType})`);
+          return { success: true, pluginInstalled: false, warning: remoteWarning };
+        }
         const installResult = await ensureWeComPluginInstalled();
         if (!installResult.installed) {
           return {
@@ -1518,6 +1538,12 @@ function registerOpenClawHandlers(gatewayManager: GatewayManager): void {
         };
       }
       if (channelType === 'qqbot') {
+        const remoteWarning = await getRemotePluginInstallWarning('QQ Bot');
+        if (remoteWarning) {
+          await saveChannelConfig(channelType, config);
+          scheduleGatewayChannelSaveRefresh(channelType, `channel:saveConfig (${channelType})`);
+          return { success: true, pluginInstalled: false, warning: remoteWarning };
+        }
         const installResult = await ensureQQBotPluginInstalled();
         if (!installResult.installed) {
           return {
@@ -1534,6 +1560,12 @@ function registerOpenClawHandlers(gatewayManager: GatewayManager): void {
         };
       }
       if (channelType === 'feishu') {
+        const remoteWarning = await getRemotePluginInstallWarning('Feishu');
+        if (remoteWarning) {
+          await saveChannelConfig(channelType, config);
+          scheduleGatewayChannelSaveRefresh(channelType, `channel:saveConfig (${channelType})`);
+          return { success: true, pluginInstalled: false, warning: remoteWarning };
+        }
         const installResult = await ensureFeishuPluginInstalled();
         if (!installResult.installed) {
           return {
@@ -2176,7 +2208,7 @@ function registerSettingsHandlers(gatewayManager: GatewayManager): void {
       await gatewayManager.restart();
       return;
     }
-    if (settings.useRemoteOpenClaw) {
+    if (settings.useRemoteOpenClaw && settings.remoteOpenClawUrl.trim().length > 0) {
       await gatewayManager.start();
     }
   };

@@ -34,7 +34,7 @@ import {
 } from './quit-lifecycle';
 import { createSignalQuitHandler } from './signal-quit';
 import { acquireProcessInstanceFileLock } from './process-instance-lock';
-import { getSetting } from '../utils/store';
+import { getAllSettings } from '../utils/store';
 import { ensureBuiltinSkillsInstalled, ensurePreinstalledSkillsInstalled } from '../utils/skill-config';
 import { ensureAllBundledPluginsInstalled } from '../utils/plugin-install';
 import { isOpenClawPresent } from '../utils/paths';
@@ -322,7 +322,9 @@ async function initialize(): Promise<void> {
 
   // Note: Auto-check for updates is driven by the renderer (update store init)
   // so it respects the user's "Auto-check for updates" setting.
+  const startupSettings = await getAllSettings();
   const localOpenClawAvailable = isOpenClawPresent();
+  const managesLocalOpenClaw = localOpenClawAvailable && !startupSettings.useRemoteOpenClaw;
 
   // Repair any bootstrap files that only contain ClawX markers (no OpenClaw
   // template content). This fixes a race condition where ensureClawXContext()
@@ -331,12 +333,14 @@ async function initialize(): Promise<void> {
     logger.warn('Failed to repair bootstrap files:', error);
   });
 
-  if (localOpenClawAvailable) {
+  if (managesLocalOpenClaw) {
     // Pre-deploy built-in skills (feishu-doc, feishu-drive, feishu-perm, feishu-wiki)
     // to ~/.openclaw/skills/ so they are immediately available without manual install.
     void ensureBuiltinSkillsInstalled().catch((error) => {
       logger.warn('Failed to install built-in skills:', error);
     });
+  } else if (startupSettings.useRemoteOpenClaw) {
+    logger.info('Remote OpenClaw mode enabled; skipping built-in skill deployment');
   } else {
     logger.info('Local OpenClaw runtime unavailable; skipping built-in skill deployment');
   }
@@ -344,16 +348,22 @@ async function initialize(): Promise<void> {
   // Pre-deploy bundled third-party skills from resources/preinstalled-skills.
   // This installs full skill directories (not only SKILL.md) in an idempotent,
   // non-destructive way and never blocks startup.
-  void ensurePreinstalledSkillsInstalled().catch((error) => {
-    logger.warn('Failed to install preinstalled skills:', error);
-  });
+  if (startupSettings.useRemoteOpenClaw) {
+    logger.info('Remote OpenClaw mode enabled; skipping preinstalled skill deployment');
+  } else {
+    void ensurePreinstalledSkillsInstalled().catch((error) => {
+      logger.warn('Failed to install preinstalled skills:', error);
+    });
+  }
 
-  if (localOpenClawAvailable) {
+  if (managesLocalOpenClaw) {
     // Pre-deploy/upgrade bundled OpenClaw plugins (dingtalk, wecom, qqbot, feishu, wechat)
     // to ~/.openclaw/extensions/ so they are always up-to-date after an app update.
     void ensureAllBundledPluginsInstalled().catch((error) => {
       logger.warn('Failed to install/upgrade bundled plugins:', error);
     });
+  } else if (startupSettings.useRemoteOpenClaw) {
+    logger.info('Remote OpenClaw mode enabled; skipping bundled plugin deployment');
   } else {
     logger.info('Local OpenClaw runtime unavailable; skipping bundled plugin deployment');
   }
@@ -434,8 +444,9 @@ async function initialize(): Promise<void> {
   });
 
   // Start Gateway automatically (this seeds missing bootstrap files with full templates)
-  const gatewayAutoStart = await getSetting('gatewayAutoStart');
-  if (gatewayAutoStart) {
+  const shouldAutoStartGateway = startupSettings.gatewayAutoStart
+    && (!startupSettings.useRemoteOpenClaw || startupSettings.remoteOpenClawUrl.trim().length > 0);
+  if (shouldAutoStartGateway) {
     try {
       await syncAllProviderAuthToRuntime();
       logger.debug('Auto-starting Gateway...');
@@ -445,6 +456,8 @@ async function initialize(): Promise<void> {
       logger.error('Gateway auto-start failed:', error);
       mainWindow?.webContents.send('gateway:error', String(error));
     }
+  } else if (startupSettings.gatewayAutoStart && startupSettings.useRemoteOpenClaw) {
+    logger.info('Gateway auto-start skipped because remote-only mode is enabled but no remote OpenClaw URL is configured');
   } else {
     logger.info('Gateway auto-start disabled in settings');
   }
@@ -456,7 +469,7 @@ async function initialize(): Promise<void> {
     logger.warn('Failed to merge ClawX context into workspace:', error);
   });
 
-  if (localOpenClawAvailable) {
+  if (managesLocalOpenClaw) {
     // Auto-install openclaw CLI and shell completions (non-blocking).
     void autoInstallCliIfNeeded((installedPath) => {
       mainWindow?.webContents.send('openclaw:cli-installed', installedPath);
@@ -466,6 +479,8 @@ async function initialize(): Promise<void> {
     }).catch((error) => {
       logger.warn('CLI auto-install failed:', error);
     });
+  } else if (startupSettings.useRemoteOpenClaw) {
+    logger.info('Remote OpenClaw mode enabled; skipping CLI auto-install');
   } else {
     logger.info('Local OpenClaw runtime unavailable; skipping CLI auto-install');
   }

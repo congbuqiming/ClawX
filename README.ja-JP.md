@@ -357,6 +357,7 @@ pnpm run release:remote
 ```
 
 既存のリモート OpenClaw Gateway に接続する場合は、`Settings -> Gateway -> Use Remote OpenClaw` を有効にしてください。`pnpm run package:remote`、`pnpm run build:remote`、`pnpm run release:remote`、および各プラットフォーム向けの `package:*:remote` は自動で `resources/openclaw` の同梱をスキップします。
+これらの remote-only コマンドは、実行時にもローカル Gateway の自動起動や探査を行いません。まだリモート URL が未設定なら、Settings で保存するまで ClawX は待機します。
 
 ローカル開発でも、ローカル OpenClaw ランタイムを完全にスキップしてリモート Gateway のみ使いたい場合は、次のコマンドを実行してください。
 
