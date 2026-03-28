@@ -326,12 +326,16 @@ async function initialize(): Promise<void> {
   const localOpenClawAvailable = isOpenClawPresent();
   const managesLocalOpenClaw = localOpenClawAvailable && !startupSettings.useRemoteOpenClaw;
 
-  // Repair any bootstrap files that only contain ClawX markers (no OpenClaw
-  // template content). This fixes a race condition where ensureClawXContext()
-  // previously created the file before the gateway could seed the full template.
-  void repairClawXOnlyBootstrapFiles().catch((error) => {
-    logger.warn('Failed to repair bootstrap files:', error);
-  });
+  if (!startupSettings.useRemoteOpenClaw) {
+    // Repair any bootstrap files that only contain ClawX markers (no OpenClaw
+    // template content). This fixes a race condition where ensureClawXContext()
+    // previously created the file before the gateway could seed the full template.
+    void repairClawXOnlyBootstrapFiles().catch((error) => {
+      logger.warn('Failed to repair bootstrap files:', error);
+    });
+  } else {
+    logger.info('Remote OpenClaw mode enabled; skipping workspace bootstrap repair');
+  }
 
   if (managesLocalOpenClaw) {
     // Pre-deploy built-in skills (feishu-doc, feishu-drive, feishu-perm, feishu-wiki)
@@ -372,7 +376,7 @@ async function initialize(): Promise<void> {
   // renderer subscribers observe the full startup lifecycle.
   gatewayManager.on('status', (status: { state: string }) => {
     hostEventBus.emit('gateway:status', status);
-    if (status.state === 'running') {
+    if (status.state === 'running' && !startupSettings.useRemoteOpenClaw) {
       void ensureClawXContext().catch((error) => {
         logger.warn('Failed to re-merge ClawX context after gateway reconnect:', error);
       });
@@ -462,12 +466,16 @@ async function initialize(): Promise<void> {
     logger.info('Gateway auto-start disabled in settings');
   }
 
-  // Merge ClawX context snippets into the workspace bootstrap files.
-  // The gateway seeds workspace files asynchronously after its HTTP server
-  // is ready, so ensureClawXContext will retry until the target files appear.
-  void ensureClawXContext().catch((error) => {
-    logger.warn('Failed to merge ClawX context into workspace:', error);
-  });
+  if (!startupSettings.useRemoteOpenClaw) {
+    // Merge ClawX context snippets into the workspace bootstrap files.
+    // The gateway seeds workspace files asynchronously after its HTTP server
+    // is ready, so ensureClawXContext will retry until the target files appear.
+    void ensureClawXContext().catch((error) => {
+      logger.warn('Failed to merge ClawX context into workspace:', error);
+    });
+  } else {
+    logger.info('Remote OpenClaw mode enabled; skipping workspace context merge');
+  }
 
   if (managesLocalOpenClaw) {
     // Auto-install openclaw CLI and shell completions (non-blocking).

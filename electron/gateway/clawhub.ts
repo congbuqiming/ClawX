@@ -51,7 +51,6 @@ export class ClawHubService {
         // Use the user's OpenClaw config directory (~/.openclaw) for skill management
         // This avoids installing skills into the project's openclaw submodule
         this.workDir = getOpenClawConfigDir();
-        ensureDir(this.workDir);
 
         const binPath = getClawHubCliBinPath();
         const entryPath = getClawHubCliEntryPath();
@@ -128,6 +127,7 @@ export class ClawHubService {
      */
     private async runCommand(args: string[]): Promise<string> {
         return new Promise((resolve, reject) => {
+            ensureDir(this.workDir);
             if (this.useNodeRunner && !fs.existsSync(this.cliEntryPath)) {
                 reject(new Error(`ClawHub CLI entry not found at: ${this.cliEntryPath}`));
                 return;
@@ -319,6 +319,7 @@ export class ClawHubService {
      */
     async uninstall(params: ClawHubUninstallParams): Promise<void> {
         const fsPromises = fs.promises;
+        ensureDir(this.workDir);
 
         // 1. Delete the skill directory
         const skillDir = path.join(this.workDir, 'skills', params.slug);
